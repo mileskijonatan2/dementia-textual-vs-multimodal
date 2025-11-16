@@ -19,15 +19,11 @@ def set_seed(s=42):
 
 
 def download_audios(destination="./dataset/audio/dementia_audios.7z"):
-    # Audios download
     file_id = "1Mgv9wVvH7Az1imX3T4MYZin2-c841ksS"
     output_name = destination
 
     if not os.path.exists(output_name):
         gdown.download(f"https://drive.google.com/uc?id={file_id}", output_name, quiet=False)
-
-        #Unzip files
-        #subprocess.run(["7z", "x", output_name], check=True)
         subprocess.run(["7z", "x", output_name, f"-o{os.path.dirname(output_name)}"], check=True)
 
 
@@ -70,6 +66,8 @@ if __name__ == '__main__':
     download_audios()
 
     train_dataset, test_dataset, eval_dataset, group_by_id = None, None, None, None
+    train_enc_only, test_enc_only, eval_enc_only = None, None, None
+
     if add_symbols:
         train_dataset, test_dataset, eval_dataset, group_by_id = get_split_datasets("./dataset/text/complete_dataset_text_level_symbols.csv", instruction, seed=seed)
         # Dataset for encoder-only models
@@ -143,9 +141,9 @@ if __name__ == '__main__':
                 model = Qwen2AudioModel(model_name=model_name, learning_rate=lr,
                                         num_epochs=epochs, batch_size=batch_size,
                                         device="cuda:0",
-                                        train_dataset=train_dataset,
-                                        test_dataset=test_dataset,
-                                        eval_dataset=eval_dataset,
+                                        train_dataset=train_enc_only,
+                                        test_dataset=test_enc_only,
+                                        eval_dataset=eval_enc_only,
                                         audio_path="./dataset/audio/data/DementiaBank/audio/{}/cookie/cleaned/{}.mp3",
                                         task_prompt=qwen_task_prompt,
                                         bf16=True, seed=seed, debug=False)
