@@ -8,6 +8,7 @@ import pandas as pd
 from argparse import ArgumentParser
 from architectures import EncoderDecoderArchitecture, DecoderOnlyArchitecture, EncoderOnlyArchitecture, Qwen2AudioModel
 from utils import get_split_datasets, analyze_misclassified_samples
+from huggingface_hub import login
 
 
 def set_seed(s=42):
@@ -55,6 +56,8 @@ if __name__ == '__main__':
 
     set_seed(s=seed)
     add_symbols = True if add_symbols == "y" else False
+
+    login(token=os.getenv("HF_TOKEN"))
 
     open("./results/misclassifed_groups/percentage_misclassified_group.csv", write_mode).close()
     open("./results/misclassifed_groups/count_misclassified_group.csv", write_mode).close()
