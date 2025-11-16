@@ -26,7 +26,8 @@ def download_audios(destination="./dataset/audio/dementia_audios.7z"):
         gdown.download(f"https://drive.google.com/uc?id={file_id}", output_name, quiet=False)
 
         #Unzip files
-        subprocess.run(["7z", "x", output_name], check=True)
+        #subprocess.run(["7z", "x", output_name], check=True)
+        subprocess.run(["7z", "x", output_name, f"-o{os.path.dirname(output_name)}"], check=True)
 
 
 if __name__ == '__main__':
