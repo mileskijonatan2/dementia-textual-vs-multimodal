@@ -63,6 +63,8 @@ if __name__ == '__main__':
     instruction = 'Classify into either "control" or "dementia" the following text: '
     qwen_task_prompt = 'Classify into either "control" or "dementia" the given audio and text: {}\nAnswer: '
 
+    download_audios()
+
     train_dataset, test_dataset, eval_dataset, group_by_id = None, None, None, None
     if add_symbols:
         train_dataset, test_dataset, eval_dataset, group_by_id = get_split_datasets("./dataset/text/complete_dataset_text_level_symbols.csv", instruction, seed=seed)

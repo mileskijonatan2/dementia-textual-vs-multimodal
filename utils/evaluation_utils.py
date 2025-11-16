@@ -59,12 +59,12 @@ def analyze_misclassified_samples(ids, true, predicted, groups_dict, model_name)
                 count_control += 1
 
     for k in misclassified_samples_per_group.keys():
-        misclassified_group_percent[f'{k} %'] = [misclassified_samples_per_group[k] / count_dementia]
+        misclassified_group_percent[f'{k} %'] = [misclassified_samples_per_group[k] / count_dementia] if count_dementia != 0 else [0]
         misclassified_samples_per_group[k] = [misclassified_samples_per_group[k]]
 
     misclassified_group_percent['Model'] = [model_name]
-    misclassified_group_percent['Control'] = [count_control / (count_control + count_dementia)]
-    misclassified_group_percent['Dementia'] = [count_dementia / (count_control + count_dementia)]
+    misclassified_group_percent['Control'] = [count_control / (count_control + count_dementia)] if (count_control + count_dementia) != 0 else [0]
+    misclassified_group_percent['Dementia'] = [count_dementia / (count_control + count_dementia)] if (count_control + count_dementia) != 0 else [0]
     misclassified_samples_per_group['Model'] = [model_name]
     misclassified_samples_per_group['Control'] = [count_control]
     misclassified_samples_per_group['Dementia'] = [count_dementia]
