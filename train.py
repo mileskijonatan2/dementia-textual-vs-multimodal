@@ -5,11 +5,13 @@ import torch
 import random
 import numpy as np
 import pandas as pd
+from dotenv import load_dotenv
 from argparse import ArgumentParser
 from architectures import EncoderDecoderArchitecture, DecoderOnlyArchitecture, EncoderOnlyArchitecture, Qwen2AudioModel
 from utils import get_split_datasets, analyze_misclassified_samples
 from huggingface_hub import login
 
+load_dotenv()
 
 def set_seed(s=42):
     random.seed(s)
@@ -63,8 +65,6 @@ if __name__ == '__main__':
     instruction = 'Classify into either "control" or "dementia" the following text: '
     qwen_task_prompt = 'Classify into either "control" or "dementia" the given audio and text: {}\nAnswer: '
 
-    download_audios()
-
     train_dataset, test_dataset, eval_dataset, group_by_id = None, None, None, None
     train_enc_only, test_enc_only, eval_enc_only = None, None, None
 
@@ -105,6 +105,7 @@ if __name__ == '__main__':
 
     if 'qwen' in models_included:
         models['qwen'] = qwen_model_names
+        download_audios()
 
     for k in models.keys():
         print(f"\n+++++ {k} architectures training starts +++++")
