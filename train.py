@@ -190,3 +190,6 @@ if __name__ == '__main__':
                     f.write(f"{id}\n")
 
             print("------------------------------------")
+
+            del model
+            torch.cuda.empty_cache()
