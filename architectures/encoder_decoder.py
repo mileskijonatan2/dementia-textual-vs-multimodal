@@ -45,6 +45,11 @@ class EncoderDecoderArchitecture:
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name, device_map=device)
+
+        # For T5 gemma problems
+        if not hasattr(self.model.config, "num_hidden_layers"):
+            self.model.config.num_hidden_layers = self.model.config.encoder.num_hidden_layers
+
         self.data_collator = DataCollatorForSeq2Seq(self.tokenizer, model=self.model)
         self.fp16 = fp16
         self.seed = seed
