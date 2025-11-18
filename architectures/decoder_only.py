@@ -56,7 +56,7 @@ class DecoderOnlyArchitecture:
             model_name,
             device_map=self.device,
             quantization_config=self.nf4_config,
-            use_cache=False
+            # use_cache=False
         )
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
