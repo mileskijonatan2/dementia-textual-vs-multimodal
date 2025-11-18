@@ -31,7 +31,7 @@ def download_audios(destination="./dataset/audio/dementia_audios.7z"):
 
 if __name__ == '__main__':
     parser = ArgumentParser("Training hyperparameters")
-    parser.add_argument("--models", type=str, nargs='+', help="'enc-dec' for encoder-decoder, 'enc' for encoder-only, 'dec' for decoder-only, 'qwen' for qwen2-audio")
+    parser.add_argument("--model", type=str, help="name of the model")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--epochs", type=int, default=10)
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     epochs = args.epochs
     lr = args.lr
-    models_included = args.models
+    model_name = args.model
     add_symbols = args.symbols
     write_mode = args.write_mode
 
@@ -54,12 +54,13 @@ if __name__ == '__main__':
 
     set_seed(s=seed)
     add_symbols = True if add_symbols == "y" else False
+    name_suffix = "_sy" if add_symbols else ""
 
     login(token=os.getenv("HF_TOKEN"))
 
-    open("./results/misclassifed_groups/percentage_misclassified_group.csv", write_mode).close()
-    open("./results/misclassifed_groups/count_misclassified_group.csv", write_mode).close()
-    open("./results/metrics.csv", write_mode).close()
+    open(f"./results/misclassifed_groups/percentage_misclassified_group{name_suffix}.csv", write_mode).close()
+    open(f"./results/misclassifed_groups/count_misclassified_group{name_suffix}.csv", write_mode).close()
+    open(f"./results/metrics{name_suffix}.csv", write_mode).close()
 
     # Specify the instruction for fine-tuning
     instruction = 'Classify into either "control" or "dementia" the following text: '
@@ -92,104 +93,84 @@ if __name__ == '__main__':
 
     qwen_model_names = ["Qwen/Qwen2-Audio-7B-Instruct", "Qwen/Qwen2-Audio-7B"]
 
-    models = dict()
+    model = None
 
-    if 'enc-dec' in models_included:
-        models["encoder-decoder"] = enc_dec_model_names
-
-    if 'enc' in models_included:
-        models["encoder-only"] = enc_only_model_names
-
-    if 'dec' in models_included:
-        models['decoder-only'] = dec_only_model_names
-
-    if 'qwen' in models_included:
-        models['qwen'] = qwen_model_names
-        download_audios()
-
-    for k in models.keys():
-        print(f"\n+++++ {k} architectures training starts +++++")
-        print("====================================")
-        model_names = models[k]
-
-        for model_name in model_names:
-            model = None
-            if k == "encoder-decoder":
-                fp16 = True if 't5gemma' in model_name else False
-                model = EncoderDecoderArchitecture(model_name=model_name, learning_rate=lr,
-                                                   num_epochs=epochs, batch_size=batch_size, device="cuda:0",
-                                                   train_dataset=train_dataset,
-                                                   test_dataset=test_dataset,
-                                                   eval_dataset=eval_dataset,
-                                                   fp16=fp16, seed=seed)
-            elif k == "decoder-only":
-                model = DecoderOnlyArchitecture(model_name=model_name, learning_rate=lr,
-                                                num_epochs=epochs, batch_size=batch_size, device="cuda:0",
-                                                train_dataset=train_dataset,
-                                                test_dataset=test_dataset,
-                                                eval_dataset=eval_dataset,
-                                                bf16=True, max_length=1024, seed=seed)
-            elif k == "encoder-only":
-                model = EncoderOnlyArchitecture(model_name=model_name,
-                                                learning_rate=lr, num_epochs=epochs, batch_size=batch_size,
-                                                device="cuda:0",
-                                                train_dataset=train_enc_only,
-                                                test_dataset=test_enc_only,
-                                                eval_dataset=eval_enc_only,
-                                                fp16=True, seed=seed, weight_decay=0.0005)
-
-            elif k == "qwen":
-                model = Qwen2AudioModel(model_name=model_name, learning_rate=lr,
-                                        num_epochs=epochs, batch_size=batch_size,
+    if model_name in enc_dec_model_names:
+        fp16 = True if 't5gemma' in model_name else False
+        model = EncoderDecoderArchitecture(model_name=model_name, learning_rate=lr,
+                                           num_epochs=epochs, batch_size=batch_size, device="cuda:0",
+                                           train_dataset=train_dataset,
+                                           test_dataset=test_dataset,
+                                           eval_dataset=eval_dataset,
+                                           fp16=fp16, seed=seed)
+    elif model_name in dec_only_model_names:
+        model = DecoderOnlyArchitecture(model_name=model_name, learning_rate=lr,
+                                        num_epochs=epochs, batch_size=batch_size, device="cuda:0",
+                                        train_dataset=train_dataset,
+                                        test_dataset=test_dataset,
+                                        eval_dataset=eval_dataset,
+                                        bf16=True, max_length=1024, seed=seed)
+    elif model_name in enc_only_model_names:
+        model = EncoderOnlyArchitecture(model_name=model_name,
+                                        learning_rate=lr, num_epochs=epochs, batch_size=batch_size,
                                         device="cuda:0",
                                         train_dataset=train_enc_only,
                                         test_dataset=test_enc_only,
                                         eval_dataset=eval_enc_only,
-                                        audio_path="./dataset/audio/data/DementiaBank/audio/{}/cookie/cleaned/{}.mp3",
-                                        task_prompt=qwen_task_prompt,
-                                        bf16=True, seed=seed, debug=False)
+                                        fp16=True, seed=seed, weight_decay=0.0005)
 
-            model.train()
-            ids, predictions, true, accuracy, precision, recall, f1 = model.predict()
+    elif model_name in qwen_model_names:
+        model = Qwen2AudioModel(model_name=model_name, learning_rate=lr,
+                                num_epochs=epochs, batch_size=batch_size,
+                                device="cuda:0",
+                                train_dataset=train_enc_only,
+                                test_dataset=test_enc_only,
+                                eval_dataset=eval_enc_only,
+                                audio_path="./dataset/audio/data/DementiaBank/audio/{}/cookie/cleaned/{}.mp3",
+                                task_prompt=qwen_task_prompt,
+                                bf16=True, seed=seed, debug=False)
 
-            preds_df = pd.DataFrame({'id': ids, 'predictions': predictions, 'true': true})
+    model.train()
+    ids, predictions, true, accuracy, precision, recall, f1 = model.predict()
 
-            if len(model_name.split("/")) == 2:
-                model_name = model_name.split("/")[1]
+    preds_df = pd.DataFrame({'id': ids, 'predictions': predictions, 'true': true})
 
-            # Save results
-            preds_df.to_csv(f'./results/predictions/{model_name}_preds.csv', index=False)
+    if len(model_name.split("/")) == 2:
+        model_name = model_name.split("/")[1]
 
-            df_metrics = pd.DataFrame({"Model": [model_name], "Accuracy": [accuracy], "Precision": [precision], "Recall": [recall], "F1": [f1]})
-            ms_group_percent, ms_samples_per_group, misclassified_ids = analyze_misclassified_samples(ids, true, predictions, group_by_id, model_name)
+    # Save results
+    preds_df.to_csv(f'./results/predictions/{model_name}_preds{name_suffix}.csv', index=False)
 
-            try:
-                existing = pd.read_csv("./results/metrics.csv")
-            except pd.errors.EmptyDataError:
-                existing = pd.DataFrame()
-            combined = pd.concat([existing, df_metrics], ignore_index=True)
-            combined.to_csv("./results/metrics.csv", index=False)
+    df_metrics = pd.DataFrame({"Model": [model_name], "Accuracy": [accuracy], "Precision": [precision], "Recall": [recall], "F1": [f1]})
+    ms_group_percent, ms_samples_per_group, misclassified_ids = analyze_misclassified_samples(ids, true, predictions, group_by_id, model_name)
 
-            try:
-                existing = pd.read_csv("./results/misclassifed_groups/percentage_misclassified_group.csv")
-            except pd.errors.EmptyDataError:
-                existing = pd.DataFrame()
-            combined = pd.concat([existing, ms_group_percent], ignore_index=True)
-            combined.to_csv("./results/misclassifed_groups/percentage_misclassified_group.csv", index=False)
+    try:
+        existing = pd.read_csv(f"./results/metrics{name_suffix}.csv")
+    except pd.errors.EmptyDataError:
+        existing = pd.DataFrame()
+    combined = pd.concat([existing, df_metrics], ignore_index=True)
+    combined.to_csv(f"./results/metrics{name_suffix}.csv", index=False)
 
-            try:
-                existing = pd.read_csv("./results/misclassifed_groups/count_misclassified_group.csv")
-            except pd.errors.EmptyDataError:
-                existing = pd.DataFrame()
-            combined = pd.concat([existing, ms_samples_per_group], ignore_index=True)
-            combined.to_csv("./results/misclassifed_groups/count_misclassified_group.csv", index=False)
+    try:
+        existing = pd.read_csv(f"./results/misclassifed_groups/percentage_misclassified_group{name_suffix}.csv")
+    except pd.errors.EmptyDataError:
+        existing = pd.DataFrame()
+    combined = pd.concat([existing, ms_group_percent], ignore_index=True)
+    combined.to_csv(f"./results/misclassifed_groups/percentage_misclassified_group{name_suffix}.csv", index=False)
 
-            with open(f"./results/misclassified_ids/{model_name}.txt", "w") as f:
-                f.write(f"Misclassified predictions of {model_name}\n")
-                for id in misclassified_ids:
-                    f.write(f"{id}\n")
+    try:
+        existing = pd.read_csv(f"./results/misclassifed_groups/count_misclassified_group{name_suffix}.csv")
+    except pd.errors.EmptyDataError:
+        existing = pd.DataFrame()
+    combined = pd.concat([existing, ms_samples_per_group], ignore_index=True)
+    combined.to_csv(f"./results/misclassifed_groups/count_misclassified_group{name_suffix}.csv", index=False)
 
-            print("------------------------------------")
+    with open(f"./results/misclassified_ids/{model_name}{name_suffix}.txt", "w") as f:
+        f.write(f"Misclassified predictions of {model_name}{name_suffix}\n")
+        for id in misclassified_ids:
+            f.write(f"{id}\n")
 
-            del model
-            torch.cuda.empty_cache()
+    print("------------------------------------")
+
+    del model
+    torch.cuda.empty_cache()
