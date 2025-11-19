@@ -73,7 +73,8 @@ class DecoderOnlyArchitecture:
             lora_dropout=0.1,
             r=64,
             bias="none",
-            task_type="CAUSAL_LM"
+            task_type="CAUSAL_LM",
+            target_modules=self.get_target_modules(model_name)
         )
 
         self.model = prepare_model_for_kbit_training(self.model)
@@ -128,6 +129,28 @@ class DecoderOnlyArchitecture:
         print(f"Fine-tuning time for {self.model_name} with {self.num_epochs} epochs: {time_taken:.2f}s")
         print("-------------------")
         print(f"Fine-tuning of {self.model_name} finished.")
+
+    def get_target_modules(self, model_name):
+        if "gemma" in model_name:
+            return [
+                "q_proj", "k_proj", "v_proj", "o_proj",
+                "gate_proj", "up_proj", "down_proj"
+            ]
+        if "mistral" in model_name.lower():
+            return [
+                "q_proj", "k_proj", "v_proj", "o_proj",
+                "w1", "w2", "w3"
+            ]
+        if "llama" in model_name.lower():
+            return [
+                "q_proj", "k_proj", "v_proj", "o_proj",
+                "gate_proj", "up_proj", "down_proj"
+            ]
+        if "gpt-neo" in model_name.lower():
+            return [
+                "q_proj", "k_proj", "v_proj", "out_proj"
+            ]
+        raise ValueError(f"Unknown model: {model_name}")
 
     def _map_to_prompt_completion_dataset(self, dataset):
         """

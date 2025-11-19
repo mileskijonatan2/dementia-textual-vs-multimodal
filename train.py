@@ -120,6 +120,7 @@ if __name__ == '__main__':
                                         fp16=True, seed=seed, weight_decay=0.0005)
 
     elif model_name in qwen_model_names:
+        download_audios()
         model = Qwen2AudioModel(model_name=model_name, learning_rate=lr,
                                 num_epochs=epochs, batch_size=batch_size,
                                 device="cuda:0",

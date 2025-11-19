@@ -120,7 +120,7 @@ for TYPE in "${MODEL_TYPES[@]}"; do
             --epochs $EPOCHS \
             --lr $LR \
             --symbols $SYMBOLS \
-            --write_mode $WRITE_MODE"
+            --write_mode $CURRENT_WRITE_MODE"
 
         echo "Running command:"
         echo "$CMD"
@@ -129,7 +129,7 @@ for TYPE in "${MODEL_TYPES[@]}"; do
         $CMD
 
         echo ""
-        echo "Successfully finished fine-tuning and evaluation of $MODEL"
+        echo "++++++++++++++++++++++++++++++++++++"
         echo ""
 
     done
