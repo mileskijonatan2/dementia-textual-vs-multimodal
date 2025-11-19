@@ -2,4 +2,4 @@
 
 To reporoduce the experiments with all architectures:
 ```
-bash run.py --model_types enc enc-dec dec qwen --epochs 10 --batch_size 8 --write_mode w
+bash run.sh --model_types enc enc-dec dec qwen --epochs 10 --batch_size 8 --write_mode w
