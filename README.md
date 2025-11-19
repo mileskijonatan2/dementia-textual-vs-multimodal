@@ -2,4 +2,4 @@
 
 To reporoduce the experiments with all architectures:
 ```
-python train.py --models enc dec enc-dec qwen 
+bash run.py --model_types enc enc-dec dec qwen --epochs 10 --batch_size 8 --write_mode w
