@@ -3,7 +3,8 @@
 1. Clone the repository:
    
 ```
-git clone https://github.com/mileskijonatan2/dementia-textual-vs-multimodal.git   
+git clone https://github.com/mileskijonatan2/dementia-textual-vs-multimodal.git
+
 2. Create .env file with your huggingface token.
 3. To reporoduce the experiments with all architectures run:
 
