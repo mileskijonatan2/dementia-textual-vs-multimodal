@@ -21,7 +21,7 @@ def set_seed(s=42):
 
 
 def download_audios(destination="./dataset/audio/dementia_audios.7z"):
-    file_id = "1Mgv9wVvH7Az1imX3T4MYZin2-c841ksS"
+    file_id = os.getenv("FILE_ID")
     output_name = destination
 
     if not os.path.exists(output_name):
