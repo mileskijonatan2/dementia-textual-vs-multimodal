@@ -7,8 +7,10 @@ git clone https://github.com/mileskijonatan2/dementia-textual-vs-multimodal.git
 cd dementia-textual-vs-multimodal 
 ```
 2. Create .env file with your huggingface token and google drive file id containing dementia and control files
-3. To reproduce experiments with specific models run:
+3. To reproduce fine-tuning experiments with specific models run:
 
 ```
 bash run.sh --model_names google/flan-t5-base Qwen/Qwen2-Audio-7B --epochs 10 --batch_size 8 --write_mode w
 ```
+
+To run fine-tuning with basic transcripts (BT) approach add `--symbols n`  
