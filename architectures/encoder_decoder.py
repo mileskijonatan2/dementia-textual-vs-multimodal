@@ -9,31 +9,7 @@ from utils import get_metrics
 
 
 class EncoderDecoderArchitecture:
-    def __init__(self, model_name, learning_rate, num_epochs, batch_size, device, train_dataset, test_dataset, eval_dataset, fp16=False, seed=42):
-        """
-        Class for training and inference of all encoder-decoder based LLMs
-
-        :param model_name: name of the model
-        :type model_name: str
-        :param learning_rate: learning rate
-        :type learning_rate: float
-        :param num_epochs: number of epochs
-        :type num_epochs: int
-        :param batch_size: batch size
-        :type batch_size: int
-        :param device: device to run the model on
-        :type device: str
-        :param train_dataset: training dataset
-        :type train_dataset: Dataset
-        :param test_dataset: test dataset
-        :type test_dataset: Dataset
-        :param eval_dataset: evaluation dataset
-        :type eval_dataset: Dataset
-        :param fp16: whether to use fp16
-        :type fp16: bool
-        :param seed: random seed
-        :type seed: int
-        """
+    def __init__(self, model_name, learning_rate, num_epochs, batch_size, device, train_dataset, test_dataset, eval_dataset, fp16=False, seed=42, max_new_tokens=6):
         self.model_name = model_name
         self.learning_rate = learning_rate
         self.num_epochs = num_epochs
@@ -46,20 +22,22 @@ class EncoderDecoderArchitecture:
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name, device_map=device)
 
-        # For T5 gemma problems
         if not hasattr(self.model.config, "num_hidden_layers"):
-            self.model.config.num_hidden_layers = self.model.config.encoder.num_hidden_layers
+            if hasattr(self.model.config, "encoder") and hasattr(self.model.config.encoder, "num_hidden_layers"):
+                self.model.config.num_hidden_layers = self.model.config.encoder.num_hidden_layers
+            elif hasattr(self.model.config, "num_layers"):
+                self.model.config.num_hidden_layers = self.model.config.num_layers
+            elif hasattr(self.model.config, "encoder") and hasattr(self.model.config.encoder, "num_layers"):
+                self.model.config.num_hidden_layers = self.model.config.encoder.num_layers
+            else:
+                self.model.config.num_hidden_layers = 12
 
         self.data_collator = DataCollatorForSeq2Seq(self.tokenizer, model=self.model)
         self.fp16 = fp16
         self.seed = seed
+        self.max_new_tokens = max_new_tokens
 
     def train(self):
-        """
-        Fine-tune the model on the training dataset
-
-        :return: None
-        """
         training_args = Seq2SeqTrainingArguments(
             output_dir=f"./finetuned_models/{self.model_name}_finetuned",
             per_device_train_batch_size=self.batch_size,
@@ -68,7 +46,6 @@ class EncoderDecoderArchitecture:
             num_train_epochs=self.num_epochs,
             learning_rate=self.learning_rate,
             fp16=self.fp16,
-            # logging_steps=10,
             save_strategy="epoch",
             logging_strategy="epoch",
             save_total_limit=5,
@@ -99,46 +76,29 @@ class EncoderDecoderArchitecture:
         print("-------------------")
         print(f"Fine-tuning of {self.model_name} finished.")
 
-    # Remove later to package
     def _preprocess_batch(self, batch):
-        """
-        Transform each batch into suitable format for encoder-decoder model
-        :param batch: DataLoader batch
-        :type batch: torch.tensor
-        """
         inputs = self.tokenizer(batch["input_text"], padding="max_length", truncation=True, max_length=512, return_tensors="pt")
         labels = self.tokenizer(batch["target_text"], padding="max_length", truncation=True, max_length=512, return_tensors="pt")
         inputs["labels"] = labels["input_ids"]
         return inputs
 
     def _prepare_trainer_dataset(self, dataset) -> Dataset:
-        """
-        Transforms Dataset object for HuggingFace Trainer
-        :param dataset: train or eval dataset for HuggingFace trainer
-        :type dataset: Dataset
-        """
         dataset = dataset.map(self._preprocess_batch, batched=True)
         return dataset
 
     def _prepare_inference_loader(self, dataset) -> DataLoader:
-        """
-        :param dataset: dataset for inference
-        :type dataset: Dataset
-        """
         dataset = dataset.map(self._preprocess_batch, batched=True, remove_columns=["input_text", "target_text", "ids"])
-        loader = DataLoader(dataset, batch_size=self.batch_size, collate_fn=self.data_collator)
+        
+        if 't5gemma' in self.model_name.lower():
+            from transformers import default_data_collator
+            loader = DataLoader(dataset, batch_size=self.batch_size, collate_fn=default_data_collator)
+        else:
+            loader = DataLoader(dataset, batch_size=self.batch_size, collate_fn=self.data_collator)
         return loader
 
     def predict(self, split="test", calculate_metrics=True):
-        """
-        Inference on specified dataset split. Can return classification metrics results for the prediction results.
-        :param split: train, test or eval split
-        :type split: str
-        :param calculate_metrics: whether to calculate metrics or not
-        :type calculate_metrics: bool
-        """
         dataset = self.test_dataset if split == "test" else self.train_dataset if split == "train" else self.eval_dataset
-        true = list(dataset['target_text'])  # ground truths
+        true = list(dataset['target_text'])
         ids = list(dataset['ids'])
         loader = self._prepare_inference_loader(dataset)
 
@@ -152,7 +112,7 @@ class EncoderDecoderArchitecture:
                 outputs = self.model.generate(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
-                    max_new_tokens=6
+                    max_new_tokens=self.max_new_tokens
                 )
 
             decoded_preds = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
@@ -170,4 +130,3 @@ class EncoderDecoderArchitecture:
             accuracy, precision, recall, f1 = None, None, None, None
 
         return ids, predictions, true, accuracy, precision, recall, f1
-
